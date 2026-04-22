@@ -1,6 +1,6 @@
 ---
 name: thermal-overload-mitigation
-description: Senior power-engineer playbook for overloaded lines and transformers. Use when power-flow or contingency studies show loading above ratings and the agent needs an operationally credible sequence of redispatch, topology, and reinforcement actions.
+description: "Senior power-engineer playbook for thermal overloads on lines and transformers. Use when power-flow or contingency studies show branch loading above MVA ratings, N-1 violations, line rating exceedances, or congestion, and the agent needs an operationally credible sequence of generation redispatch, bus-splitting, phase-shifter adjustment, conductor upsizing, or load curtailment."
 ---
 
 # Thermal overload mitigation
@@ -8,11 +8,14 @@ description: Senior power-engineer playbook for overloaded lines and transformer
 Start with the monitored element, the applicable rating, and the driving condition.
 
 ## Preferred action order
-1. Confirm the overload is real: correct rating set, correct outage state, and solved base case or contingency.
-2. Redispatch generation or transfer patterns to unload the corridor.
-3. Reconfigure topology or switching where operations permit.
-4. Use phase shifters, HVDC schedules, or transformer controls only when sensitivity evidence supports them.
-5. If the issue is persistent, move to reconductoring, uprating, or new facilities.
+1. **Confirm** the overload is real: correct rating set, correct outage state, and solved base case or contingency.
+2. **Redispatch** generation or transfer patterns to unload the corridor.
+3. **Reconfigure** topology or switching where operations permit (bus-splitting, line switching).
+4. **Adjust controls** — phase shifters, HVDC schedules, or transformer taps — only when sensitivity evidence supports them.
+5. **Reinforce** if the issue is persistent: reconductoring, uprating, or new facilities.
+6. After each action, re-solve and verify the overload is relieved. If not, proceed to the next step.
+
+**Example:** Line A–B loaded at 105 % of normal rating after N-1 loss of Line C–D. PTDF shows Generator G3 has −0.18 sensitivity. Redispatching 40 MW from G3 to G5 reduces loading to 94 % — verified by re-solving all monitored contingencies.
 
 ## Working rules
 - Separate normal-rating issues from emergency-rating issues.

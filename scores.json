@@ -1,0 +1,10 @@
+{
+  "repo": "Power-Agent/PowerSkills",
+  "skills": [
+    { "name": "andes", "before": 81, "after": 94 },
+    { "name": "pandapower", "before": 94, "after": 94 },
+    { "name": "pypsa", "before": 90, "after": 100 },
+    { "name": "thermal-overload-mitigation", "before": 79, "after": 94 },
+    { "name": "contingency-mitigation", "before": 79, "after": 94 }
+  ]
+}
