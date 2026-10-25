@@ -15,6 +15,10 @@ Start with a runnable netlist and a clean batch simulation. Use plotting and GUI
 5. `plot_specific_traces(raw_file_path, session_dir, trace_names)` for focused waveform review.
 6. `view_netlist_in_ltspice(netlist_path)` only when the GUI is actually needed.
 
+## Escalation triggers
+- If a batch run fails after simplifying to a minimal reproducible netlist, report the simulator error and stop rather than presenting incomplete waveforms as valid results.
+- If the run completes but expected traces are absent, report the missing traces and inspect the log before attempting plots.
+
 ## Working rules
 - Do not ask for broad plotting until the log is clean and the available traces are known.
 - Simplify the netlist and shorten the run before tuning tolerances.

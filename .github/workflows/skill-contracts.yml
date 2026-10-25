@@ -1,0 +1,38 @@
+name: Skill contract verification
+
+on:
+  push:
+    branches: [main, test/engineering-skill-contract-verification]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  skill-contracts:
+    name: Skill contracts (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Checkout PowerMCP tool definitions
+        uses: actions/checkout@v4
+        with:
+          repository: Power-Agent/PowerMCP
+          ref: main
+          path: PowerMCP
+
+      - name: Verify skill contracts and documented assets
+        env:
+          POWER_MCP_REPO: PowerMCP
+        run: |
+          python -m unittest discover -s tests -v
+          python skill-creator/scripts/contract_validate.py
