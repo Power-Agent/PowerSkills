@@ -1,0 +1,27 @@
+name: Pandapower N-1 example regression
+
+on:
+  push:
+    branches: [fix/pandapower-contingency-reporting]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  n1-example:
+    name: N-1 example (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install test dependencies
+        run: python -m pip install --upgrade pip pytest pandapower
+      - name: Execute documented N-1 example
+        run: python -m pytest -q tests/test_n1_example.py

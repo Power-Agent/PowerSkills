@@ -208,67 +208,118 @@ print(net.res_line[['p_from_mw', 'loading_percent', 'pl_mw']])
 ### Example 8: N-1 Contingency Analysis
 
 ```python
+import copy
 import pandapower as pp
 import pandapower.networks as pn
+
+V_MIN, V_MAX = 0.95, 1.05
+LOADING_LIMIT = 100.0
+
+
+def analyze_line_outages(net, run_power_flow=pp.runpp):
+    """Run one N-1 case per line and account for every outcome."""
+    results = []
+
+    for line_idx in net.line.index:
+        test_net = copy.deepcopy(net)
+        test_net.line.at[line_idx, "in_service"] = False
+
+        try:
+            run_power_flow(test_net)
+        except Exception as exc:
+            results.append({
+                "contingency": f"Line {line_idx}",
+                "status": "failed",
+                "error": str(exc),
+                "voltage_violations": [],
+                "line_overloads": [],
+                "trafo_overloads": [],
+            })
+            continue
+
+        if not test_net.converged:
+            results.append({
+                "contingency": f"Line {line_idx}",
+                "status": "diverged",
+                "voltage_violations": [],
+                "line_overloads": [],
+                "trafo_overloads": [],
+            })
+            continue
+
+        voltage_violations = test_net.res_bus[
+            (test_net.res_bus.vm_pu < V_MIN) | (test_net.res_bus.vm_pu > V_MAX)
+        ].index.tolist()
+        line_overloads = (
+            test_net.res_line[test_net.res_line.loading_percent > LOADING_LIMIT]
+            .index.tolist()
+            if not test_net.res_line.empty else []
+        )
+        trafo_overloads = (
+            test_net.res_trafo[test_net.res_trafo.loading_percent > LOADING_LIMIT]
+            .index.tolist()
+            if not test_net.res_trafo.empty else []
+        )
+
+        results.append({
+            "contingency": f"Line {line_idx}",
+            "status": "converged",
+            "voltage_violations": voltage_violations,
+            "line_overloads": line_overloads,
+            "trafo_overloads": trafo_overloads,
+        })
+
+    return results
+
 
 net = pn.case14()
 pp.runpp(net)
 
-results = []
+if not net.converged:
+    raise RuntimeError("Base-case power flow did not converge; stop before N-1 analysis.")
 
-# Test each line outage
-for line_idx in net.line.index:
-    test_net = net.deepcopy()
-    test_net.line.at[line_idx, 'in_service'] = False
+results = analyze_line_outages(net)
 
-    try:
-        pp.runpp(test_net)
-    except:
-        results.append({'contingency': f'Line {line_idx}', 'status': 'failed'})
-        continue
-
-    if not test_net.converged:
-        results.append({'contingency': f'Line {line_idx}', 'status': 'diverged'})
-    else:
-        v_violations = test_net.res_bus[
-            (test_net.res_bus.vm_pu < 0.95) | (test_net.res_bus.vm_pu > 1.05)
-        ].index.tolist()
-        l_violations = test_net.res_line[
-            test_net.res_line.loading_percent > 100
-        ].index.tolist()
-
-        results.append({
-            'contingency': f'Line {line_idx}',
-            'status': 'converged',
-            'voltage_violations': v_violations,
-            'loading_violations': l_violations,
-            'min_voltage': test_net.res_bus.vm_pu.min(),
-            'max_loading': test_net.res_line.loading_percent.max()
-        })
-
-# Report critical contingencies
-critical = [r for r in results if r['status'] != 'converged'
-            or r.get('voltage_violations') or r.get('loading_violations')]
+tested = len(results)
+converged = sum(r["status"] == "converged" for r in results)
+failed = sum(r["status"] == "failed" for r in results)
+diverged = sum(r["status"] == "diverged" for r in results)
+critical = sum(
+    1 for r in results
+    if (
+        r["status"] != "converged"
+        or r["voltage_violations"]
+        or r["line_overloads"]
+        or r["trafo_overloads"]
+    )
+)
 
 print("=== N-1 Contingency Results ===")
-print(f"Total analyzed: {len(results)}")
-print(f"Critical:       {len(critical)}")
+print(f"Total analyzed: {tested}")
+print(f"Converged:      {converged}")
+print(f"Failed:         {failed}")
+print(f"Diverged:       {diverged}")
+print(f"Critical:       {critical}")
 
-for r in critical:
-    print(f"\n  {r['contingency']}:")
-    if r['status'] == 'diverged':
-        print("    Power flow did not converge")
-    elif r['status'] == 'failed':
-        print("    Simulation failed")
-    else:
-        if r['voltage_violations']:
-            print(f"    Voltage violations at buses: {r['voltage_violations']}")
-        if r['loading_violations']:
-            print(f"    Overloaded lines: {r['loading_violations']}")
-
-if not critical:
-    print("  System is N-1 secure.")
+for r in results:
+    if (
+        r["status"] != "converged"
+        or r["voltage_violations"]
+        or r["line_overloads"]
+        or r["trafo_overloads"]
+    ):
+        print(f"\n{r['contingency']}: {r['status']}")
+        if r.get("error"):
+            print(f"  Error: {r['error']}")
+        if r["voltage_violations"]:
+            print(f"  Voltage violations: {r['voltage_violations']}")
+        if r["line_overloads"]:
+            print(f"  Overloaded lines:   {r['line_overloads']}")
+        if r["trafo_overloads"]:
+            print(f"  Overloaded trafos:  {r['trafo_overloads']}")
 ```
+
+The important distinction is that **failed/diverged contingencies are not treated as secure cases**. A complete sweep should account for every requested outage and report execution status separately from electrical violations.
 
 ---
 
