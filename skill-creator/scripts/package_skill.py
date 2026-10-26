@@ -61,10 +61,13 @@ def package_skill(skill_path, output_dir=None):
         print(f"❌ Error: Path is not a directory: {skill_path}")
         return None
 
-    # Validate SKILL.md exists
+    # Validate SKILL.md exists and is a real file inside the skill tree.
     skill_md = skill_path / "SKILL.md"
     if not skill_md.exists():
         print(f"❌ Error: SKILL.md not found in {skill_path}")
+        return None
+    if skill_md.is_symlink():
+        print(f"❌ Error: SKILL.md must not be a symbolic link: {skill_md}")
         return None
 
     # Run validation before packaging
@@ -88,10 +91,21 @@ def package_skill(skill_path, output_dir=None):
 
     # Create the .skill file (zip format)
     try:
-        with zipfile.ZipFile(skill_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Walk through the skill directory, excluding build artifacts
-            for file_path in skill_path.rglob('*'):
+        with zipfile.ZipFile(skill_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+            # Walk through the skill directory, excluding build artifacts.
+            # Never follow file symlinks: they can pull unrelated files outside
+            # the skill tree into the distributable archive.
+            for file_path in skill_path.rglob("*"):
+                if file_path.is_symlink():
+                    print(f"  Skipped symbolic link: {file_path.relative_to(skill_path)}")
+                    continue
                 if not file_path.is_file():
+                    continue
+                # The default output directory can be the skill directory itself.
+                # In that case the archive is visible to rglob while it is being
+                # written, so explicitly keep the output archive out of itself.
+                if file_path.resolve() == skill_filename.resolve():
+                    print(f"  Skipped output archive: {file_path.relative_to(skill_path)}")
                     continue
                 arcname = file_path.relative_to(skill_path.parent)
                 if should_exclude(arcname):

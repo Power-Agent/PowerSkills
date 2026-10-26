@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   validator-regression:
-    name: Validator regression (Python ${{ matrix.python-version }})
+    name: Validator and packaging regression (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -36,8 +36,8 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install --upgrade pip pytest PyYAML
 
-      - name: Run UTF-8 validator regression test
-        run: python -m pytest -q skill-creator/tests/test_quick_validate_encoding.py
+      - name: Run skill-creator regression tests
+        run: python -m pytest -q skill-creator/tests
 
       - name: Compile validator and tests
         run: python -m compileall -q skill-creator/scripts skill-creator/tests
